@@ -66,6 +66,6 @@ This repository is licensed under the MIT License. Feel free to use, modify, and
 
 ## 📬 Contact
 
-If you have any questions, suggestions, or feedback, please feel free to reach out via email at your-email@example.com. We would love to hear from you!
+If you have any questions, suggestions, or feedback, please feel free to reach out via email at contact+support@abeia.dev. We would love to hear from you!
 
 Let's make social media growth easier and more enjoyable with the FollowBot! 🎉
