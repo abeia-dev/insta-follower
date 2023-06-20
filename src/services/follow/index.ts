@@ -1,4 +1,4 @@
-import { Page } from 'puppeteer'
+import { ElementHandle, Page } from 'puppeteer'
 import chalk from 'chalk'
 import * as selectors from '../../constants/selectors'
 import * as urls from '../../constants/urls'
@@ -6,103 +6,94 @@ import delay from '../../utils/delay'
 
 export const Follow = async (page: Page, username: string, limit: number) => {
 	let followed = 0
+	let checkedAccounts = 0
 
 	console.log(
-		`🤖 -> Going to ${chalk.cyanBright(`${username}'s`)} followers page`
+		`🤖 -> Going to ${chalk.cyanBright(`@${username}`)} followers page`
 	)
 
 	await page.goto(urls.followersPage(username))
-	await delay(2000)
+	await delay(3000)
 
-	const followProfileFollowers = async (
-		initialIndex: number
-	): Promise<number> => {
-		await delay(3000)
-		let amIaFollower = false
-		let actionButtons = await page.$$(selectors.followersPage.actionButton)
-		let accountUsernames = await page.$$(selectors.followersPage.usernames)
+	let actionButtons: ElementHandle<Element>[] = []
+	let accountUsernames: ElementHandle<Element>[] = []
 
-		if (accountUsernames.length > actionButtons.length) {
-			amIaFollower = true
-		}
+	let amIaFollower = false
 
-		console.log(
-			`actionButtons: ${actionButtons.length}\naccountUsernames: ${accountUsernames.length}`
-		)
+	const sweepAccounts = async (start: number = 0) => {
+		actionButtons = [
+			...actionButtons,
+			...(await page.$$(selectors.followersPage.actionButton)).slice(start),
+		]
 
-		actionButtons = actionButtons.slice(initialIndex, initialIndex + 12)
-		accountUsernames = accountUsernames.slice(initialIndex, initialIndex + 12)
+		accountUsernames = [
+			...accountUsernames,
+			...(await page.$$(selectors.followersPage.usernames)).slice(
+				amIaFollower ? start + 1 : start
+			),
+		]
 
-		for (let i = 0; i < actionButtons.length; i++) {
-			const button = actionButtons[i]
-
-			if (followed >= limit) {
-				console.log(
-					`⚠️ -> Followers limit of  ${chalk.redBright(
-						limit
-					)} was ${chalk.greenBright('reached')}!`
-				)
-				break
-			}
-
-			const buttonText = await button.evaluate((e) => {
-				e.scrollIntoView()
-				return e.textContent
-			})
-
-			const usernameIndex = amIaFollower ? i + 1 : i
-			const username = await accountUsernames[usernameIndex].evaluate(
-				(e) => e.textContent
-			)
-
-			await delay(1000)
-
-			if (['Follow', 'Seguir'].includes(`${buttonText}`)) {
-				await button.click()
-				followed++
-
-				console.log(
-					`✅ -> Instagram user ${chalk.cyanBright(
-						`@${username}`
-					)} was followed`
-				)
-
-				await delay(Math.random() * (6000 - 5000) + 5000)
-
-				const modals = await page.$$(selectors.followersPage.tryLaterModal)
-
-				const modalsFound = modals.length
-				if (modalsFound > 1) {
-					const modalTime = new Date().getTime()
-
-					const screenshotPath = `./screenshots/${modalTime}.png`
-					await page.screenshot({
-						path: screenshotPath,
-					})
-
-					console.log(
-						`🤬 -> Sh$%#t, instagram just blocked me saying: ${chalk.redBright(
-							'too many actions'
-						)}...\nBut don't worry, you should not be blocked!\n${chalk.bgRed.white(
-							' YET! '
-						)}`
-					)
-
-					console.log(
-						`🤖 -> I just took a screenshot for you to see what happened ${chalk.cyanBright(
-							screenshotPath
-						)}`
-					)
-
-					break
-				}
-			}
-
-			await followProfileFollowers(initialIndex + 12)
-		}
-
-		return followed
+		amIaFollower = actionButtons.length !== accountUsernames.length
 	}
 
-	await followProfileFollowers(0)
+	await sweepAccounts()
+
+	for (let index = 0; index < actionButtons.length; index++) {
+		if (followed >= limit) {
+			break
+		}
+
+		await sweepAccounts(actionButtons.length)
+
+		const actionButton = actionButtons[index]
+
+		const actionText = await actionButton.evaluate((el) => {
+			el.scrollIntoView()
+			return el.textContent
+		})
+
+		const usernameIndex = amIaFollower ? index + 1 : index
+
+		const username = await accountUsernames[usernameIndex].evaluate(
+			(el) => el.textContent
+		)
+
+		await delay(2000)
+
+		checkedAccounts++
+		if (!['follow', 'seguir'].includes(`${actionText}`.toLocaleLowerCase())) {
+			console.log(
+				`🤣 -> The user ${chalk.cyanBright(
+					`@${username}`
+				)} was already followed`
+			)
+			continue
+		}
+
+		await actionButton.click()
+		followed++
+		console.log(
+			`✅ -> Instagram user ${chalk.cyanBright(
+				`@${username}`
+			)} was followed successfully`
+		)
+		await delay(2000)
+	}
+
+	console.log(`\n👀 -> Follow limit defined: ${chalk.redBright(limit)}`)
+	console.log(`🤖 -> Followed accounts: ${chalk.greenBright(followed)}`)
+	console.log(
+		`🤖 -> Already followed accounts: ${chalk.greenBright(
+			checkedAccounts - followed
+		)}`
+	)
+	console.log(`🤖 -> Reached accounts: ${chalk.greenBright(checkedAccounts)}`)
+
+	if (checkedAccounts - followed === checkedAccounts) {
+		console.log(
+			`🤦 -> Your account already follows ${chalk.cyan(
+				'all followers'
+			)} from ${chalk.cyanBright(`@${username}`)}`
+		)
+	}
 }
