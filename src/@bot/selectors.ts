@@ -6,6 +6,6 @@ export const signInPage = {
 
 export const followersPage = {
 	actionButton: '[role="dialog"] button [dir="auto"]',
-	usernames: '[role="dialog"] [role="button"] div span[dir="auto"] div a',
+	usernames: '[role="dialog"] span a[role="link"]',
 	tryLaterModal: 'div[role="dialog"] div[role="dialog"]',
 }
