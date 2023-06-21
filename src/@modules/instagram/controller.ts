@@ -10,7 +10,7 @@ export const followProfileFollowers = (req: Request, res: Response) => {
 	const botProcessId = crypto.randomUUID()
 
 	updateLogStatus(`${botProcessId}`, 'PROCESSING')
-	puppeteer.launch({ headless: false }).then(async (browser) => {
+	puppeteer.launch({ headless: 'new' }).then(async (browser) => {
 		const page = await browser.newPage()
 		await page.setViewport({ width: 1080, height: 1080 })
 
